@@ -3,7 +3,7 @@ import time
 import requests
 
 # 1. YOUR REAL SLACK ENDPOINT CONFIGURATION
-CPU_THRESHOLD = 80.0  # Percentage baseline for any single core
+CPU_THRESHOLD = 10.0  # Percentage baseline for any single core
 import os
 
 # Instead of hardcoding, look for a variable configured on the computer running it
