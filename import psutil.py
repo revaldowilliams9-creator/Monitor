@@ -2,36 +2,52 @@ import psutil
 import time
 import requests
 
-# Configuration
-CPU_THRESHOLD = 80.0  # Percentage
-WEBHOOK_URL = "YOUR_DISCORD_OR_SLACK_WEBHOOK_URL_HERE"
+# 1. YOUR REAL SLACK ENDPOINT CONFIGURATION
+CPU_THRESHOLD = 80.0  # Percentage baseline for any single core
+import os
+
+# Instead of hardcoding, look for a variable configured on the computer running it
+WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
+
 
 def check_system_health():
-    # Get current CPU and RAM usage
-    cpu_usage = psutil.cpu_percent(interval=1)
+    # Setting percpu=True returns a list of percentages for each individual core
+    core_usages = psutil.cpu_percent(interval=1, percpu=True)
     ram_usage = psutil.virtual_memory().percent
     
-    print(f"Checking system stats... CPU: {cpu_usage}% | RAM: {ram_usage}%")
+    # Print out the stats for each individual core cleanly in terminal
+    print("\n--- CPU Core Breakdown ---")
+    for core_index, core_percentage in enumerate(core_usages):
+        print(f"Core {core_index}: {core_percentage}%")
+    print(f"Overall RAM Usage: {ram_usage}%")
+    print("--------------------------")
     
-    # Check if CPU usage exceeds the safe limit
-    if cpu_usage > CPU_THRESHOLD:
-        alert_message = f"🚨 WARNING: High CPU usage detected! Current Load: {cpu_usage}%"
+    # DevOps Automation: Check if ANY individual core is hitting the threshold limit
+    high_load_cores = []
+    for core_index, core_percentage in enumerate(core_usages):
+        if core_percentage > CPU_THRESHOLD:
+            high_load_cores.append(f"Core {core_index} ({core_percentage}%)")
+            
+    if high_load_cores:
+        cores_alert_string = ", ".join(high_load_cores)
+        alert_message = f"🚨 DevOps ALERT: High load detected on specific processing units! -> {cores_alert_string}"
         print(alert_message)
         send_alert(alert_message)
 
 def send_alert(message):
-    # This simulates a DevOps monitoring alert sent to an operations channel
-    payload = {"content": message} # Use {"text": message} if you are using Slack
+    # CRITICAL SLACK FIX: Slack requires the key to be named "text" (not "content")
+    payload = {"text": message} 
     try:
         response = requests.post(WEBHOOK_URL, json=payload)
-        if response.status_code == 204 or response.status_code == 200:
+        if response.status_code == 200:
             print("Alert successfully sent to DevOps chat channel!")
+        else:
+            print(f"Slack returned an error code: {response.status_code}")
     except Exception as e:
         print(f"Failed to send alert: {e}")
 
-# Run the monitor loop every 5 seconds
 if __name__ == "__main__":
-    print("DevOps Monitoring Agent Started...")
+    print("Advanced Core-Level DevOps Monitoring Agent Started...")
     while True:
         check_system_health()
-        time.sleep(5)
+        time.sleep(4) # Short sleep interval since cpu_percent already takes 1 second
